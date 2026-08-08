@@ -3,7 +3,7 @@
 Object detection project using YOLOv8-OBB to detect personal protective equipment: helmet, safety vest, and safety shoes.
 
 ## Live Demo
-https://ppe-detection-6xs8my2e3ixcexqushdxnd.streamlit.app
+STREAMLIT[https://ppe-detection-6xs8my2e3ixcexqushdxnd.streamlit.app]
 
 ## Classes
 - helmet
