@@ -2,9 +2,8 @@
 
 Object detection project using YOLOv8-OBB to detect personal protective equipment: helmet, safety vest, and safety shoes.
 
-
-## 🌐 Live Demo
-[STREAMLIT](https://ppe-detection-6xs8my2e3ixcexqushdxnd.streamlit.app)
+## Live Demo
+https://ppe-detection-6xs8my2e3ixcexqushdxnd.streamlit.app
 
 ## Classes
 - helmet
@@ -18,9 +17,9 @@ Object detection project using YOLOv8-OBB to detect personal protective equipmen
 - Streamlit (deployment)
 
 ## Results (test set)
-| Class | mAP50 |
-|---|---|
-| helmet | 0.746 |
-| safety_vest | 0.887 |
-| safety_shoes | 0.454 |
-| **Overall** | **0.696** |
+| Class | Precision | Recall | mAP50 | mAP50-95 |
+|---|---|---|---|---|
+| helmet | 0.771 | 0.711 | 0.746 | 0.519 |
+| safety_vest | 0.794 | 0.875 | 0.887 | 0.666 |
+| safety_shoes | 0.671 | 0.500 | 0.454 | 0.316 |
+| **Overall** | **0.746** | **0.695** | **0.696** | **0.500** |
