@@ -4,9 +4,7 @@ Object detection project using YOLOv8-OBB to detect personal protective equipmen
 
 
 ## 🌐 Live Demo
-
-[STREAMLIT]([https://airline-delay-dashboard-uzckqchivbogtd5wsghykr.streamlit.app/](https://ppe-detection-6xs8my2e3ixcexqushdxnd.streamlit.app))
-
+[STREAMLIT](https://ppe-detection-6xs8my2e3ixcexqushdxnd.streamlit.app)
 
 ## Classes
 - helmet
