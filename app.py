@@ -3,6 +3,11 @@ from ultralytics import YOLO
 from PIL import Image
 from io import BytesIO
 from collections import Counter
+import cv2
+import tempfile
+import os
+import subprocess
+
 
 # -----------------------------------
 # PAGE SETTINGS
@@ -14,6 +19,7 @@ st.set_page_config(
     layout='wide'
 )
 
+
 # -----------------------------------
 # CUSTOM DESIGN
 # -----------------------------------
@@ -21,6 +27,7 @@ st.set_page_config(
 st.markdown(
     '''
     <style>
+
     .main-title {
         font-size: 42px;
         font-weight: 800;
@@ -67,10 +74,12 @@ st.markdown(
         padding-bottom: 15px;
         font-size: 14px;
     }
+
     </style>
     ''',
     unsafe_allow_html=True
 )
+
 
 # -----------------------------------
 # LOAD MODEL
@@ -82,6 +91,7 @@ def load_model():
 
 
 model = load_model()
+
 
 # -----------------------------------
 # HEADER
@@ -101,6 +111,7 @@ st.markdown(
     ''',
     unsafe_allow_html=True
 )
+
 
 # -----------------------------------
 # SIDEBAR
@@ -136,24 +147,65 @@ st.sidebar.caption(
     'Lower confidence may detect more objects but can increase false positives.'
 )
 
+
 # -----------------------------------
-# UPLOAD IMAGE
+# UPLOAD IMAGE / VIDEO
 # -----------------------------------
 
-uploaded_file = st.file_uploader(
-    '📤 Upload an image for PPE analysis',
-    type=['jpg', 'jpeg', 'png']
+input_type = st.radio(
+    'Choose input type:',
+    ['🖼️ Image', '🎥 Video'],
+    horizontal=True
 )
 
-if uploaded_file is None:
 
-    st.info(
-        'Upload an image to start PPE detection.'
+# -----------------------------------
+# IMAGE UPLOAD
+# -----------------------------------
+
+if input_type == '🖼️ Image':
+
+    uploaded_file = st.file_uploader(
+        '📤 Upload an image for PPE analysis',
+        type=['jpg', 'jpeg', 'png']
     )
+
+
+# -----------------------------------
+# VIDEO UPLOAD
+# -----------------------------------
 
 else:
 
+    uploaded_file = st.file_uploader(
+        '🎥 Upload a video for PPE analysis',
+        type=['mp4', 'avi', 'mov']
+    )
+
+
+# -----------------------------------
+# NO FILE
+# -----------------------------------
+
+if uploaded_file is None:
+
+    if input_type == '🖼️ Image':
+
+        st.info('Upload an image to start PPE detection.')
+
+    else:
+
+        st.info('Upload a video to start PPE detection.')
+
+
+# ===================================
+# IMAGE DETECTION
+# ===================================
+
+elif input_type == '🖼️ Image':
+
     image = Image.open(uploaded_file).convert('RGB')
+
 
     # -----------------------------------
     # RUN DETECTION
@@ -168,6 +220,7 @@ else:
         )
 
     result = results[0]
+
 
     # -----------------------------------
     # EXTRACT DETECTIONS
@@ -188,6 +241,7 @@ else:
             detected_classes.append(class_name)
             detected_confidences.append(float(conf))
 
+
     counts = Counter(detected_classes)
 
     helmet_count = counts.get('helmet', 0)
@@ -195,6 +249,7 @@ else:
     shoes_count = counts.get('safety_shoes', 0)
 
     total_detections = len(detected_classes)
+
 
     # -----------------------------------
     # METRICS
@@ -226,6 +281,7 @@ else:
 
     st.markdown('---')
 
+
     # -----------------------------------
     # IMAGES
     # -----------------------------------
@@ -241,6 +297,7 @@ else:
             use_container_width=True
         )
 
+
     with result_col:
 
         st.subheader('Detection Result')
@@ -252,6 +309,7 @@ else:
             channels='BGR',
             use_container_width=True
         )
+
 
     # -----------------------------------
     # STATUS
@@ -271,6 +329,7 @@ else:
         ]
     )
 
+
     if detected_types == 3:
 
         st.markdown(
@@ -281,6 +340,7 @@ else:
             ''',
             unsafe_allow_html=True
         )
+
 
     elif detected_types > 0:
 
@@ -293,6 +353,7 @@ else:
             unsafe_allow_html=True
         )
 
+
     else:
 
         st.markdown(
@@ -304,10 +365,12 @@ else:
             unsafe_allow_html=True
         )
 
+
     st.caption(
         'Status is based on PPE detected in the overall image, '
         'not PPE assigned to each individual person.'
     )
+
 
     # -----------------------------------
     # PPE CHECKLIST
@@ -317,32 +380,46 @@ else:
 
     check1, check2, check3 = st.columns(3)
 
+
     with check1:
 
         if has_helmet:
+
             st.success('🪖 Helmet Detected')
+
         else:
+
             st.error('🪖 Helmet Not Detected')
+
 
     with check2:
 
         if has_vest:
+
             st.success('🦺 Safety Vest Detected')
+
         else:
+
             st.error('🦺 Safety Vest Not Detected')
+
 
     with check3:
 
         if has_shoes:
+
             st.success('🥾 Safety Shoes Detected')
+
         else:
+
             st.error('🥾 Safety Shoes Not Detected')
+
 
     # -----------------------------------
     # DETECTION DETAILS
     # -----------------------------------
 
     st.markdown('## 🔎 Detection Details')
+
 
     if total_detections > 0:
 
@@ -364,20 +441,24 @@ else:
                 }
             )
 
+
         st.dataframe(
             detection_data,
             use_container_width=True,
             hide_index=True
         )
 
+
         highest_confidence = max(
             detected_confidences
         )
+
 
         st.metric(
             'Highest Confidence',
             f'{highest_confidence:.1%}'
         )
+
 
     else:
 
@@ -385,8 +466,9 @@ else:
             'No PPE objects were detected at the current confidence threshold.'
         )
 
+
     # -----------------------------------
-    # DOWNLOAD RESULT
+    # DOWNLOAD IMAGE RESULT
     # -----------------------------------
 
     st.markdown('## 📥 Export Result')
@@ -412,7 +494,232 @@ else:
         mime='image/jpeg'
     )
 
+
+# ===================================
+# VIDEO DETECTION - BONUS
+# ===================================
+
+else:
+
+    st.markdown('## 🎥 Video PPE Detection')
+
+
+    # -----------------------------------
+    # SAVE UPLOADED VIDEO
+    # -----------------------------------
+
+    with tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix='.mp4'
+    ) as temp_input:
+
+        temp_input.write(
+            uploaded_file.read()
+        )
+
+        input_video_path = temp_input.name
+
+
+    # -----------------------------------
+    # CREATE OUTPUT VIDEO
+    # -----------------------------------
+
+    output_video_path = tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix='.avi'
+    ).name
+
+
+    # -----------------------------------
+    # OPEN VIDEO
+    # -----------------------------------
+
+    cap = cv2.VideoCapture(input_video_path)
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+
+    width = int(
+        cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    )
+
+    height = int(
+        cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    )
+
+
+    if fps <= 0:
+
+        fps = 25
+
+
+    fourcc = cv2.VideoWriter_fourcc(
+        *'XVID'
+    )
+
+    writer = cv2.VideoWriter(
+        output_video_path,
+        fourcc,
+        fps,
+        (width, height)
+    )
+
+
+    # -----------------------------------
+    # PROCESS VIDEO
+    # -----------------------------------
+
+    total_frames = int(
+        cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    )
+
+    progress_bar = st.progress(0)
+
+    status_text = st.empty()
+
+
+    frame_count = 0
+
+
+    with st.spinner('🎥 Analyzing video...'):
+
+        while cap.isOpened():
+
+            success, frame = cap.read()
+
+            if not success:
+
+                break
+
+
+            # YOLO detection on current frame
+            results = model.predict(
+                source=frame,
+                conf=confidence_threshold,
+                verbose=False
+            )
+
+            result = results[0]
+
+
+            # Draw OBB detections
+            plotted_frame = result.plot()
+
+
+            # Write processed frame
+            writer.write(
+                plotted_frame
+            )
+
+
+            frame_count += 1
+
+
+            if total_frames > 0:
+
+                progress = min(
+                    frame_count / total_frames,
+                    1.0
+                )
+
+                progress_bar.progress(
+                    progress
+                )
+
+                status_text.text(
+                    f'Processing frame {frame_count} '
+                    f'of {total_frames}'
+                )
+
+
+    cap.release()
+    writer.release()
+
+
+    progress_bar.progress(1.0)
+
+    status_text.text(
+        '✅ Video processing completed!'
+    )
+
 # -----------------------------------
+    # CONVERT AVI TO MP4
+    # -----------------------------------
+
+    output_mp4_path = tempfile.NamedTemporaryFile(
+    delete=False,
+    suffix='.mp4'
+    ).name
+
+    subprocess.run(
+    [
+        'ffmpeg',
+        '-y',
+        '-i', output_video_path,
+        '-c:v', 'libx264',
+        '-pix_fmt', 'yuv420p',
+        '-movflags', '+faststart',
+        output_mp4_path
+    ],
+    check=True,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE
+    )
+
+    final_video_path = output_mp4_path
+    
+    # -----------------------------------
+    # DISPLAY RESULT
+    # -----------------------------------
+
+    st.markdown('## 🎯 Detection Result')
+
+    with open(
+        final_video_path,
+        'rb'
+    ) as video_file:
+
+        video_bytes = video_file.read()
+
+
+    st.video(
+        video_bytes
+    )
+
+
+    # -----------------------------------
+    # DOWNLOAD VIDEO
+    # -----------------------------------
+
+    st.markdown('## 📥 Export Result')
+
+    st.download_button(
+        label='⬇️ Download Detection Video',
+        data=video_bytes,
+        file_name='ppe_detection_result.mp4',
+        mime='video/mp4'
+    )
+
+
+    # -----------------------------------
+    # CLEAN TEMP FILES
+    # -----------------------------------
+
+    try:
+
+        os.remove(input_video_path)
+
+        os.remove(output_video_path)
+
+        if os.path.exists(output_mp4_path):
+
+            os.remove(output_mp4_path)
+
+    except Exception:
+
+        pass
+
+
+    # -----------------------------------
 # FOOTER
 # -----------------------------------
 
